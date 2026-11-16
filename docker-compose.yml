@@ -1,0 +1,40 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto
+    ports: ["1883:1883"]
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  collector:
+    build: ./collector
+    depends_on: [mosquitto]
+    environment:
+      - SENSOR_URL=${SENSOR_URL:-http://smartcam.uo.ncl.ac.uk:8001/sensor}
+      - CAMERA_URL=${CAMERA_URL:-http://smartcam.uo.ncl.ac.uk:8001/camera}
+
+  mock:                      # home testing only, not used on Apporto
+    build: ./mock
+    profiles: ["mock"]
+    ports: ["8001:8001"]
+  
+  yolo:
+    build: ./yolo
+    depends_on: [mosquitto]
+  
+  predictor:
+    build: ./predictor
+    depends_on: [mosquitto]
+    volumes:
+      - ./output:/app/output
+
+  classifier:
+    build: ./classifier
+    depends_on: [mosquitto]
+    volumes:
+      - ./output:/app/output
+
+  decision:
+    build: ./decision
+    depends_on: [mosquitto]
+    environment:
+      - DASHBOARD_URL=${DASHBOARD_URL:-http://dashboard.cloud.ncl.ac.uk:8000/api/records}
